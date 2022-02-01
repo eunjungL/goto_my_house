@@ -1,6 +1,8 @@
 const express = require('express');
 const app = express();
 
+const signup_register = require('./signup');
+
 function main_template() {
     return `
         <!DOCTYPE HTML>
@@ -14,6 +16,8 @@ function main_template() {
         </html>
     `;
 }
+
+app.use('/signup', signup_register);
 
 app.get('/', function(req, res) {
     res.send(main_template());
