@@ -1,6 +1,6 @@
 const express = require(`express`);
 const app = express.Router();
-const db = require(`db`);
+const db = require(`./db`);
 
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({ extended: false}));
@@ -8,7 +8,7 @@ app.use(bodyParser.urlencoded({ extended: false}));
 function signup_template() {
     return `
         <!DOCTYPE HTML>
-        <html lang="ko">
+        <html lang="ko" xmlns="http://www.w3.org/1999/html">
             <head>
                 <title>우리 집으로 가자</title>
             </head>
@@ -16,26 +16,39 @@ function signup_template() {
             <script>
                 $(document).ready(function(){
                    $("#id_check").click(function() {
-                           $.post('/signup', {id: $('#id').val()}, function (data) {
-                           $("#id_check_txt").text("사용할 수 있는 아이디입니다.");
-                       })
-                   })
+                       $.post('/signup', {id: $('#id').val()}, function (data) {
+                           if (data.id_valid) $("#id_check_txt").text("사용할 수 있는 아이디입니다.");
+                           else $("#id_check_txt").text("사용할 수 없는 아이디입니다.");
+                           $("#id_check").after(
+                               "<input type='hidden' name='id_valid' value=" + data.id_valid + ">"
+                           );
+                       });
+                   });
+                   
+                   $("#phone_number_check").click(function () {
+                       $("#phone_number_check").after(
+                           "<br><input type='text' name='phone_number_password'>"
+                       );
+                   });
                 });
             </script>
             <body>
-                <label for="id">아이디</label><br>
-                <input type="text" id="id" name="id">
-                <input type="submit" id="id_check" value="아이디 확인"><br>
-                <p id="id_check_txt">아이디 중복을 확인해주세요.</p>
-                <label for="password1">비밀번호</label><br>
-                <input type="password" id="password1" name="password1"><br>
-                <label for="password2">비밀번호 확인</label><br>
-                <input type="password" id="password2" name="password2"><br>
-                <label for="name">이름</label><br>
-                <input type="text" id="name" name="name"><br>
-                <label for="phone_number">전화번호</label><br>
-                <input type="text" id="phone_number" name="phone_number">
-                <input type="submit" value="전화번호 인증">
+                <form action="/signup/signup_process" method="post">
+                    <label for="id">아이디</label><br>
+                    <input type="text" id="id" name="id">
+                    <button type="button" id="id_check">아이디 확인</button><br>
+                    <p id="id_check_txt">아이디 중복을 확인해주세요.</p>
+                    <label for="password1">비밀번호</label><br>
+                    <input type="password" id="password1" name="password1"><br>
+                    <label for="password2">비밀번호 확인</label><br>
+                    <input type="password" id="password2" name="password2"><br>
+                    <label for="name">이름</label><br>
+                    <input type="text" id="name" name="name"><br>
+                    <label for="phone_number">전화번호</label><br>
+                    <input type="text" id="phone_number" name="phone_number">
+                    <button type="button" id="phone_number_check">전화번호 인증</button><br>
+                    <input type="submit" value="가입하기">
+                </form>
             </body>
         </html>
     `;
@@ -45,11 +58,36 @@ app.get('/', function(req, res) {
     res.send(signup_template());
 })
 
-app.post('/', function(req, res) {
+app.post('/', async (req, res) => {
     const body = req.body;
-    const id = req.id;
+    const id = body.id;
+    const phone_number = body.phone_number;
+    let id_valid = true;
+    let number_valid;
 
-    db.query()
+    if (id !== '') {
+        const [result, fields] = await db.execute(`SELECT * FROM user`);
+
+        for (let i = 0; i < result.length; i++) {
+            if (id === result[i].id) id_valid = false;
+        }
+    } else {
+        id_valid = false;
+    }
+
+    res.send({id_valid: id_valid});
+})
+
+app.post('/signup_process', async (req, res) => {
+    const body = req.body;
+    const id = body.id;
+    const password = body.password1;
+    const name = body.name;
+    const phone_number = body.phone_number;
+    const id_valid = body.id_valid;
+    const number_valid = body.number_valid;
+
+
 })
 
 module.exports = app;
