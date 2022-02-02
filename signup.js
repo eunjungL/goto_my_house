@@ -48,6 +48,8 @@ app.get('/', function(req, res) {
 app.post('/', function(req, res) {
     const body = req.body;
     const id = req.id;
+
+    db.query()
 })
 
 module.exports = app;
