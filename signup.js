@@ -30,7 +30,13 @@ function signup_template() {
                            "<br><input type='text' name='phone_number_password'>"
                        );
                    });
-                });
+                   
+                   $("#password2").on('keyup', function() {
+                       if ($("#password2").val() === $("#password1").val())
+                           $("#password_check_txt").text('비밀번호가 일치합니다.');
+                       else $("#password_check_txt").text('비밀번호가 일치하지 않습니다.');
+                   })
+                })
             </script>
             <body>
                 <form action="/signup/signup_process" method="post">
@@ -42,6 +48,7 @@ function signup_template() {
                     <input type="password" id="password1" name="password1"><br>
                     <label for="password2">비밀번호 확인</label><br>
                     <input type="password" id="password2" name="password2"><br>
+                    <p id='password_check_txt'>비밀번호가 일치하지 않습니다.</p>
                     <label for="name">이름</label><br>
                     <input type="text" id="name" name="name"><br>
                     <label for="phone_number">전화번호</label><br>
@@ -87,7 +94,11 @@ app.post('/signup_process', async (req, res) => {
     const id_valid = body.id_valid;
     const number_valid = body.number_valid;
 
+    if (!id_valid) {
+        res.send('<script type="text/javascript">alert("아이디를 다시 확인해주세요."); location.href="/signup";</script>');
+    } else {
 
+    }
 })
 
 module.exports = app;
