@@ -2,6 +2,7 @@ const express = require('express');
 const app = express.Router();
 const db = require('./db');
 const bodyParser = require("body-parser");
+const request = require('request-promise');
 
 const Naver = {
     client_id : `N4qicuxNXkUCLmil_Fs5`,
@@ -37,6 +38,51 @@ function login_template(naver_api_url) {
 
 app.get('/', async (req, res) => {
     res.send(login_template(naver_api_url));
+})
+
+app.get('/naver/callback', async (req, res) => {
+    const code = req.query.code;
+    const state = req.query.state;
+
+    const naver_api_url = `https://nid.naver.com/oauth2.0/token?grant_type=authorization_code&response_type=code&client_id=${Naver.client_id}&client_secret=${Naver.client_secret}&redirect_uri=${Naver.redirectURI}&code=${code}&state=${state}`;
+
+    const options = {
+        url: naver_api_url,
+        headers: {'X-Naver-Client-Id': Naver.client_id, 'X-Naver-Client-Secret': Naver.client_secret}
+    }
+    const result = await request.get(options);
+    console.log(typeof result);
+
+    const token = JSON.parse(result).access_token;
+    console.log(token);
+    const info_options = {
+        url: 'https://openapi.naver.com/v1/nid/me',
+        headers: {'Authorization': 'Bearer ' + token}
+    };
+
+    const info_result = await request.get(info_options);
+    console.log(info_result);
+    const info_result_json = JSON.parse(info_result).response;
+
+    const [user_id, fields] = await db.execute(`SELECT id FROM user`);
+    console.log(user_id);
+
+    let is_duplicate = false;
+    for (let i = 0; i < user_id.length; i++) {
+        if (user_id[i].id === info_result_json.id) is_duplicate = true;
+    }
+
+    if (!is_duplicate) {
+        try {
+            const [result] = await db.execute(`INSERT INTO user (id, password, name, phone_number, sns_type)
+                                               VALUES (?, ?, ?,
+                                                       ?, ?)`, [info_result_json.id, null, info_result_json.name, info_result_json.mobile, 'naver']);
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    res.redirect('/');
 })
 
 module.exports = app;
