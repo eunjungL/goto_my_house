@@ -32,7 +32,6 @@ function signup_template() {
                        );
                    });
                    
-                   let password_valid = false;
                    $("#password2").on('keyup', function() {
                        if ($("#password2").val() === $("#password1").val()) {
                             $("#password_check_txt").text('비밀번호가 일치합니다.').css('color', 'blue');
