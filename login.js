@@ -4,12 +4,7 @@ const db = require('./db');
 const bodyParser = require("body-parser");
 const request = require('request-promise');
 
-const Naver = {
-    client_id : `N4qicuxNXkUCLmil_Fs5`,
-    client_secret: `OsMQcEcYH0`,
-    state: `random`,
-    redirectURI: encodeURI(`http://localhost:3000/login/naver/callback`)
-}
+const Naver = require('./admin');
 const naver_api_url = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${Naver.client_id}&redirect_uri=${Naver.redirectURI}&state=${Naver.state}`;
 
 app.use(bodyParser.urlencoded({ extended: false}));
