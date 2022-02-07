@@ -2,6 +2,8 @@ const express = require(`express`);
 const app = express.Router();
 const db = require(`./db`);
 const bcrypt = require('bcrypt');
+const Twilio = require('./admin').Twilio;
+const twilio = require('twilio')(Twilio.account_sid, Twilio.auth_token);
 
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({ extended: false}));
@@ -17,19 +19,29 @@ function signup_template() {
             <script>
                 $(document).ready(function(){
                    $("#id_check").click(function() {
-                       $.post('/signup', {id: $('#id').val()}, function (data) {
+                       $.post('/signup/id_check', {id: $('#id').val()}, function (data) {
                            if (data.id_valid) $("#id_check_txt").text("사용할 수 있는 아이디입니다.").css('color', 'blue');
                            else $("#id_check_txt").text("사용할 수 없는 아이디입니다.").css('color', 'red');
-                           $("#id_check").after(
-                               "<input type='hidden' name='id_valid' value=" + data.id_valid + ">"
-                           );
+                           if ($("#id_valid").length === 0) {
+                               $("#id_check").after(
+                                   "<input type='hidden' id='id_valid' name='id_valid' value=" + data.id_valid + ">"
+                               );
+                           } else {
+                               $("#id_valid").val(data.id_valid);
+                           }
                        });
                    });
                    
                    $("#phone_number_check").click(function () {
-                       $("#phone_number_check").after(
-                           "<br><input type='text' name='phone_number_password'>"
-                       );
+                       if ($("#phone_number_password").length === 0) {
+                           $("#phone_number_check").after(
+                               "<br><input type='text' id='phone_number_password' name='phone_number_password'>"
+                           );
+                       }
+                       
+                       $.post('/signup/phone_check', {phone_number: $("#phone_number").val()}, function (data) {
+                           
+                       });
                    });
                    
                    $("#password2").on('keyup', function() {
@@ -69,12 +81,12 @@ app.get('/', function(req, res) {
     res.send(signup_template());
 })
 
-app.post('/', async (req, res) => {
+app.post('/id_check', async (req, res) => {
     const body = req.body;
     const id = body.id;
-    const phone_number = body.phone_number;
     let id_valid = true;
-    let number_valid;
+
+    console.log("id" + id);
 
     if (id !== '') {
         const [result, fields] = await db.execute(`SELECT * FROM user`);
@@ -87,6 +99,37 @@ app.post('/', async (req, res) => {
     }
 
     res.send({id_valid: id_valid});
+})
+
+app.post('/phone_check', async (req, res) => {
+    // await twilio.messages.create({
+    //         body: 'test',
+    //         from: '+19033214036',
+    //         to: '+8201099263238'
+    //     }, function (err, message) {
+    //         if (err) console.log(err);
+    //         else console.log(message.sid);
+    //     });
+
+    const body = req.body;
+    const phone_number = body.phone_number;
+    let number_valid = false;
+
+    console.log(phone_number);
+
+    let code = '';
+    for (let i = 0; i < 4; i++) code += Math.floor(Math.random() * 10);
+    console.log(code);
+
+    try {
+        const [result] = await db.execute(`INSERT INTO sms_validation(phone_number, validation_code, expire)
+                                           VALUES (?, ?, NOW() + INTERVAL 3 MINUTE) ON DUPLICATE KEY
+                UPDATE validation_code = ?, expire = NOW() + INTERVAL 3 MINUTE`,
+            [phone_number, code, code]);
+    } catch (e) {
+        console.log(e);
+        res.send('<script type="text/javascript">alert("오류가 발생했습니다. 다시 시도 해주세요."); location.href="/signup";</script>');
+    }
 })
 
 app.post('/signup_process', async (req, res) => {
