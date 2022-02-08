@@ -37,10 +37,32 @@ function signup_template() {
                            $("#phone_number_check").after(
                                "<br><input type='text' id='phone_number_password' name='phone_number_password'>"
                            );
+                           $("#phone_number_password").after(
+                               "<button type='button' id='phone_verify_button'>인증번호 확인</button>"
+                           );
+                           $("#phone_verify_button").after(
+                               "<p id='phone_verify_txt'>인증 번호를 확인해주세요.</p>"
+                           );
+                           $("#phone_number_check").html('인증번호 재전송');
                        }
                        
                        $.post('/signup/phone_check', {phone_number: $("#phone_number").val()}, function (data) {
                            
+                       });
+                   });
+                   
+                   $(document).on('click', '#phone_verify_button', function () {
+                       $.post('/signup/phone_check/verify', {verify_code: $("#phone_number_password").val(), phone_number: $("#phone_number").val()}, function(data) {
+                           if (data.phone_valid) $("#phone_verify_txt").text('인증 되었습니다.').css('color', 'blue');
+                           else $("#phone_verify_txt").text('다시 시도해주세요.').css('color', 'red');
+                           
+                           if ($("#phone_valid").length === 0) {
+                               $("#phone_number").after(
+                                    "<input type='hidden' id='phone_valid' name='phone_valid' value=" + data.phone_valid + ">"
+                               );
+                           } else {
+                               $("#phone_valid").val(data.phone_valid);
+                           }
                        });
                    });
                    
@@ -69,7 +91,7 @@ function signup_template() {
                     <input type="text" id="name" name="name"><br>
                     <label for="phone_number">전화번호</label><br>
                     <input type="text" id="phone_number" name="phone_number">
-                    <button type="button" id="phone_number_check">전화번호 인증</button><br>
+                    <button type="button" id="phone_number_check">인증번호 전송</button><br>
                     <input type="submit" id="signup_button" value="가입하기">
                 </form>
             </body>
@@ -102,18 +124,8 @@ app.post('/id_check', async (req, res) => {
 })
 
 app.post('/phone_check', async (req, res) => {
-    // await twilio.messages.create({
-    //         body: 'test',
-    //         from: '+19033214036',
-    //         to: '+8201099263238'
-    //     }, function (err, message) {
-    //         if (err) console.log(err);
-    //         else console.log(message.sid);
-    //     });
-
     const body = req.body;
     const phone_number = body.phone_number;
-    let number_valid = false;
 
     console.log(phone_number);
 
@@ -130,6 +142,39 @@ app.post('/phone_check', async (req, res) => {
         console.log(e);
         res.send('<script type="text/javascript">alert("오류가 발생했습니다. 다시 시도 해주세요."); location.href="/signup";</script>');
     }
+
+    // await twilio.messages.create({
+    //         body: `[우리집으로 가자] 인증번호는 ${code} 입니다.`,
+    //         from: '+19033214036',
+    //         to: '+82' + phone_number
+    //     }, function (err, message) {
+    //         if (err) console.log(err);
+    //         else console.log(message.sid);
+    //     });
+})
+
+app.post('/phone_check/verify', async (req, res) => {
+    const body = req.body;
+    const code = body.verify_code;
+    const phone_number = body.phone_number;
+    let phone_valid = false;
+
+    console.log(code);
+    try {
+        const [result, field] = await db.execute(`SELECT *
+                                                  FROM sms_validation
+                                                  WHERE phone_number = ?`, [phone_number]);
+        const expire_time = new Date(result[0].expire);
+        const now = Date.now();
+        if (code === result[0].validation_code && expire_time > now) {
+            phone_valid = true;
+        }
+
+        res.send({phone_valid: phone_valid});
+    } catch (e) {
+        console.log(e);
+        res.send('<script type="text/javascript">alert("오류가 발생했습니다. 다시 시도 해주세요."); location.href="/signup";</script>');
+    }
 })
 
 app.post('/signup_process', async (req, res) => {
@@ -140,16 +185,17 @@ app.post('/signup_process', async (req, res) => {
     const name = body.name;
     const phone_number = body.phone_number;
     const id_valid = body.id_valid;
-    const number_valid = body.number_valid;
+    const phone_valid = body.phone_valid;
 
-    if (!id_valid) {
+    if (id_valid === 'false' || id_valid === undefined) {
         res.send('<script type="text/javascript">alert("아이디를 다시 확인해주세요."); location.href="/signup";</script>');
-    } else if (password1 !== password2) {
+    } else if (password1 !== password2 || password1 === '' || password2 === '') {
         res.send('<script type="text/javascript">alert("비밀번호를 다시 확인해주세요."); location.href="/signup";</script>');
+    } else if (phone_valid === 'false' || phone_valid === undefined) {
+        res.send('<script type="text/javascript">alert("핸드폰 인증번호를 확인해주세요."); location.href="/signup";</script>');
     } else if (name === '' || phone_number === '') {
         res.send('<script type="text/javascript">alert("모든 정보를 정확히 입력해주세요."); location.href="/signup";</script>');
-    }
-    else {
+    } else {
         const password_encode = await bcrypt.hash(password2, 10);
         try {
             const [result] = await db.execute(`INSERT INTO user (id, password, name, phone_number)
