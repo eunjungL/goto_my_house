@@ -32,6 +32,7 @@ function signup_template() {
                        });
                    });
                    
+                   let timer;
                    $("#phone_number_check").click(function () {
                        if ($("#phone_number_password").length === 0) {
                            $("#phone_number_check").after(
@@ -41,6 +42,9 @@ function signup_template() {
                                "<button type='button' id='phone_verify_button'>인증번호 확인</button>"
                            );
                            $("#phone_verify_button").after(
+                               "<p id='timer'>00:00</p>"
+                           );
+                           $("#timer").after(
                                "<p id='phone_verify_txt'>인증 번호를 확인해주세요.</p>"
                            );
                            $("#phone_number_check").html('인증번호 재전송');
@@ -49,6 +53,26 @@ function signup_template() {
                        $.post('/signup/phone_check', {phone_number: $("#phone_number").val()}, function (data) {
                            
                        });
+                       
+                       let minute = 3 * 60;
+                       clearInterval(timer);
+                       function start_timer () {
+                           timer = setInterval(function () {
+                               let last_min = minute / 60;
+                               last_min = Math.floor(last_min);
+                               let last_sec = minute - 60 * last_min;
+                               
+                               $("#timer").text(last_min + ":" + last_sec).css('color', 'blue');
+                               
+                               if (minute === 0) {
+                                   clearInterval(timer);
+                                   $("#timer").text("0:00").css('color', 'red');
+                               }
+                              
+                               minute -= 1;
+                           }, 1000);
+                       }
+                       start_timer();
                    });
                    
                    $(document).on('click', '#phone_verify_button', function () {
