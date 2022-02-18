@@ -3,6 +3,9 @@ const app = express.Router();
 const db = require('./db');
 const bodyParser = require("body-parser");
 const request = require('request-promise');
+const jwt = require('jsonwebtoken');
+const jwt_secret = require('./admin').JWT_KEY;
+const bcrypt = require('bcrypt');
 
 const Naver = require('./admin');
 const naver_api_url = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${Naver.Naver.client_id}&redirect_uri=${Naver.Naver.redirectURI}&state=${Naver.Naver.state}`;
@@ -18,7 +21,7 @@ function login_template(naver_api_url) {
             </head>
             <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
             <body>
-                <form action="/signup/signup_process" method="post">
+                <form action="/login" method="post">
                     <label for="id">아이디</label><br>
                     <input type="text" id="id" name="id"><br>
                     <label for="password">비밀번호</label><br>
@@ -33,6 +36,27 @@ function login_template(naver_api_url) {
 
 app.get('/', async (req, res) => {
     res.send(login_template(naver_api_url));
+})
+
+app.post('/', async (req, res) => {
+    const body = req.body;
+    const id = body.id;
+    const pwd = body.password;
+    const secret = jwt_secret.jwt_key;
+
+    const [result, field] = await db.execute(`SELECT * FROM user WHERE id=?`, [id]);
+    const encode_pwd = await bcrypt.compare(pwd, result[0].password);
+
+    if (result.length === 0) {
+        res.send('<script type="text/javascript">alert("아이디를 확인해주세요."); location.href="/login";</script>')
+    } else if (!encode_pwd) {
+        res.send('<script type="text/javascript">alert("비밀번호를 확인해주세요."); location.href="/login";</script>')
+    } else {
+        const token = await jwt.sign(
+            {user_id: id}, secret, {expiresIn: '7d'}
+        );
+        console.log(token);
+    }
 })
 
 app.get('/naver/callback', async (req, res) => {

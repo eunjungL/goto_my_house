@@ -11,4 +11,8 @@ const Twilio = {
     messaging_service_sid: 'MGdbcd196b24bb1790652ecf252eecb476'
 }
 
-module.exports = {Naver, Twilio};
+const JWT_KEY = {
+    jwt_key : 'secret'
+}
+
+module.exports = {Naver, Twilio, JWT_KEY};
