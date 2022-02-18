@@ -20,15 +20,23 @@ function login_template(naver_api_url) {
                 <title>우리 집으로 가자</title>
             </head>
             <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
+            <script>
+                $(document).ready(function() {
+                    $("#login_button").click(function() {
+                        $.post('/login', {id: $('#id').val(), password: $('#password').val()}, function(data) {
+                              localStorage.setItem('token', data.token);
+                              window.location.replace('/');
+                        })
+                    })
+                })
+            </script>
             <body>
-                <form action="/login" method="post">
                     <label for="id">아이디</label><br>
                     <input type="text" id="id" name="id"><br>
                     <label for="password">비밀번호</label><br>
                     <input type="password" id="password" name="password"><br>
-                    <input type="submit" id="login_button" value="로그인">
+                    <button type="button" id="login_button">로그인</button><br>
                     <a href=${naver_api_url}>네이버로 로그인</a>
-                </form>
             </body>
         </html>
     `;
@@ -55,7 +63,7 @@ app.post('/', async (req, res) => {
         const token = await jwt.sign(
             {user_id: id}, secret, {expiresIn: '7d'}
         );
-        console.log(token);
+        res.send({token: token});
     }
 })
 
