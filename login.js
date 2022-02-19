@@ -54,8 +54,15 @@ function account_find_template() {
             <script>
                 $(document).ready(() => {
                     $('#find_id').click(() => {
-                        $.post('/login/find_id', {name: $('#name'), phone_number: $('#phone_number')}, (data) => {
-                            
+                        $.post('/login/find_id', {name: $('#name').val(), phone_number: $('#phone_number').val()}, (data) => {
+                            if (data.id === undefined) alert('아이디가 존재하지 않습니다. 정보를 다시 확인해주세요.');
+                            else {
+                                if ($('#find_id_text').length === 0) {
+                                    $('#phone_number').after(
+                                        "<p id='find_id_text'>아이디는 " + data.id + "입니다.</p>"
+                                    );
+                                }
+                            }
                         })
                     })
                 })
@@ -63,7 +70,7 @@ function account_find_template() {
             <body>
                 <label for="name">이름</label><br>
                 <input type="text" id="name" name="name"><br>
-                <label for="phone_number">비밀번호</label><br>
+                <label for="phone_number">전화번호</label><br>
                 <input type="text" id="phone_number" name="phone_number"><br>
                 <button type="button" id="find_id">아이디 찾기</button><br>
             </body>
@@ -97,6 +104,24 @@ app.post('/', async (req, res) => {
             {user_id: id}, secret, {expiresIn: '7d'}
         );
         res.send({token: token});
+    }
+})
+
+app.post('/find_id', async (req, res) => {
+    const body = req.body;
+    const name = body.name;
+    const phone_number = body.phone_number;
+
+    try {
+        const [result, field] = await db.execute(`SELECT * FROM user WHERE name=? AND phone_number=?`, [name, phone_number]);
+
+        if (result.length === 0) {
+            res.send({id: undefined});
+        } else {
+            res.send({id: result[0].id});
+        }
+    } catch (e) {
+        res.send('<script type="text/javascript">alert("오류가 발생했습니다. 잠시 후 다시 시도해주세요."); location.href="/account_find";</script>')
     }
 })
 
