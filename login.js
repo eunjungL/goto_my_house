@@ -37,6 +37,35 @@ function login_template(naver_api_url) {
                     <input type="password" id="password" name="password"><br>
                     <button type="button" id="login_button">로그인</button><br>
                     <a href=${naver_api_url}>네이버로 로그인</a>
+                    <a href="login/account_find">아이디/비밀번호 찾기</a>
+            </body>
+        </html>
+    `;
+}
+
+function account_find_template() {
+    return `
+        <!DOCTYPE HTML>
+        <html lang="ko" xmlns="http://www.w3.org/1999/html">
+            <head>
+                <title>우리 집으로 가자</title>
+            </head>
+            <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
+            <script>
+                $(document).ready(() => {
+                    $('#find_id').click(() => {
+                        $.post('/login/find_id', {name: $('#name'), phone_number: $('#phone_number')}, (data) => {
+                            
+                        })
+                    })
+                })
+            </script>
+            <body>
+                <label for="name">이름</label><br>
+                <input type="text" id="name" name="name"><br>
+                <label for="phone_number">비밀번호</label><br>
+                <input type="text" id="phone_number" name="phone_number"><br>
+                <button type="button" id="find_id">아이디 찾기</button><br>
             </body>
         </html>
     `;
@@ -44,6 +73,10 @@ function login_template(naver_api_url) {
 
 app.get('/', async (req, res) => {
     res.send(login_template(naver_api_url));
+})
+
+app.get('/account_find', async (req, res) => {
+    res.send(account_find_template());
 })
 
 app.post('/', async (req, res) => {
