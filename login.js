@@ -6,6 +6,8 @@ const request = require('request-promise');
 const jwt = require('jsonwebtoken');
 const jwt_secret = require('./admin').JWT_KEY;
 const bcrypt = require('bcrypt');
+const Twilio = require('./admin').Twilio;
+const twilio = require('twilio')(Twilio.account_sid, Twilio.auth_token);
 
 const Naver = require('./admin');
 const naver_api_url = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${Naver.Naver.client_id}&redirect_uri=${Naver.Naver.redirectURI}&state=${Naver.Naver.state}`;
@@ -65,6 +67,12 @@ function account_find_template() {
                             }
                         })
                     })
+                    
+                    $('#find_pwd').click(() => {
+                        $.post('/login/find_pwd', {name: $('#name').val(), phone_number: $('#phone_number').val()}, (data) => {
+                            
+                        })
+                    })
                 })
             </script>
             <body>
@@ -73,6 +81,7 @@ function account_find_template() {
                 <label for="phone_number">전화번호</label><br>
                 <input type="text" id="phone_number" name="phone_number"><br>
                 <button type="button" id="find_id">아이디 찾기</button><br>
+                <button type="button" id="find_pwd">비밀번호 찾기</button>
             </body>
         </html>
     `;
@@ -122,6 +131,36 @@ app.post('/find_id', async (req, res) => {
         }
     } catch (e) {
         res.send('<script type="text/javascript">alert("오류가 발생했습니다. 잠시 후 다시 시도해주세요."); location.href="/account_find";</script>')
+    }
+})
+
+app.post('/find_pwd', async (req, res) => {
+    const body = req.body;
+    const name = body.name;
+    const phone_number = body.phone_number;
+
+    try {
+        const [result, field] = await db.execute(`SELECT * FROM user WHERE name=? AND phone_number=?`, [name, phone_number]);
+
+        if (result.length !== 0) {
+            const temp_pwd = Math.random().toString(36).substr(2, 11);
+            console.log(temp_pwd);
+
+            // const [result] = await db.execute(`UPDATE user SET password=? WHERE name=? AND phone_number=?`, [temp_pwd, name, phone_number]);
+            //
+            // await twilio.messages.create({
+            //         body: `[우리집으로 가자] 변경된 임시 비밀번호는 ${temp_pwd} 입니다. 꼭 마이페이지에서 다시 변경해주세요.`,
+            //         from: '+19033214036',
+            //         to: '+82' + phone_number
+            // }, function (err, message) {
+            //         if (err) console.log(err);
+            //         else console.log(message.sid);
+            // });
+        } else {
+            res.send({temp_pwd: 'false'});
+        }
+    } catch (e) {
+        res.send('<script type="text/javascript">alert("오류가 발생했습니다. 잠시 후 다시 시도해주세요."); location.href="/account_find";</script>');
     }
 })
 
