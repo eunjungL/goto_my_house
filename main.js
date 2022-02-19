@@ -4,6 +4,8 @@ const app = express();
 const signup_register = require('./signup');
 const login_register = require('./login');
 
+const auth_middleware = require('./auth_middleware');
+
 function main_template() {
     return `
         <!DOCTYPE HTML>
@@ -19,11 +21,13 @@ function main_template() {
     `;
 }
 
+app.use(auth_middleware);
 app.use('/signup', signup_register);
 app.use('/login', login_register);
 
 app.get('/', function(req, res) {
     res.send(main_template());
+    console.log(req.decode);
 })
 
 app.listen(3000);
