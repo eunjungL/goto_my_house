@@ -9,8 +9,8 @@ const bcrypt = require('bcrypt');
 const Twilio = require('./admin').Twilio;
 const twilio = require('twilio')(Twilio.account_sid, Twilio.auth_token);
 
-const Naver = require('./admin');
-const naver_api_url = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${Naver.Naver.client_id}&redirect_uri=${Naver.Naver.redirectURI}&state=${Naver.Naver.state}`;
+const Naver = require('./admin').Naver;
+const naver_api_url = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${Naver.client_id}&redirect_uri=${Naver.redirectURI}&state=${Naver.state}`;
 
 app.use(bodyParser.urlencoded({ extended: false}));
 
@@ -206,7 +206,12 @@ app.get('/naver/callback', async (req, res) => {
         }
     }
 
-    res.redirect('/');
+    try {
+        const app_token = await jwt.sign({user_id: info_result_json.id}, jwt_secret.jwt_key, {expiresIn: '7d'});
+        res.send({token: app_token});
+    } catch (e) {
+        res.send('<script type="text/javascript">alert("오류가 발생했습니다. 잠시 후 다시 시도해주세요."); location.href="/login";</script>');
+    }
 })
 
 module.exports = app;
