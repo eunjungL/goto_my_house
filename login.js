@@ -8,7 +8,6 @@ const jwt_secret = require('./admin').JWT_KEY;
 const bcrypt = require('bcrypt');
 const Twilio = require('./admin').Twilio;
 const twilio = require('twilio')(Twilio.account_sid, Twilio.auth_token);
-const LocalStorage = require('node-localstorage').LocalStorage;
 
 const Naver = require('./admin').Naver;
 const naver_api_url = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${Naver.client_id}&redirect_uri=${Naver.redirectURI}&state=${Naver.state}`;
