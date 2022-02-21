@@ -8,6 +8,7 @@ const jwt_secret = require('./admin').JWT_KEY;
 const bcrypt = require('bcrypt');
 const Twilio = require('./admin').Twilio;
 const twilio = require('twilio')(Twilio.account_sid, Twilio.auth_token);
+const LocalStorage = require('node-localstorage').LocalStorage;
 
 const Naver = require('./admin').Naver;
 const naver_api_url = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${Naver.client_id}&redirect_uri=${Naver.redirectURI}&state=${Naver.state}`;
@@ -206,9 +207,21 @@ app.get('/naver/callback', async (req, res) => {
         }
     }
 
+    // try {
+    //     const app_token = await jwt.sign({user_id: info_result_json.id}, jwt_secret.jwt_key, {expiresIn: '7d'});
+    //     res.send(`<script type="text/javascript">localStorage.setItem('token', ${app_token}); window.location.href="/"</script>`);
+    // } catch (e) {
+    //     res.send('<script type="text/javascript">alert("오류가 발생했습니다. 잠시 후 다시 시도해주세요."); location.href="/login";</script>');
+    // }
+    res.send(`<script src="//code.jquery.com/jquery-3.3.1.min.js"></script><script> $(document).ready(() => {$.post("/login/naver_app_token", {id: "${info_result_json.id}"}, (data) => {localStorage.setItem("token", data.token); window.location.href="/"});}) </script>`);
+})
+
+app.post('/naver_app_token', async (req, res) => {
+    const id = req.body.id;
     try {
-        const app_token = await jwt.sign({user_id: info_result_json.id}, jwt_secret.jwt_key, {expiresIn: '7d'});
-        res.send({token: app_token});
+        const app_token = await jwt.sign({user_id: id}, jwt_secret.jwt_key, {expiresIn: '7d'});
+        res.send({'token': app_token});
+        console.log(app_token);
     } catch (e) {
         res.send('<script type="text/javascript">alert("오류가 발생했습니다. 잠시 후 다시 시도해주세요."); location.href="/login";</script>');
     }
