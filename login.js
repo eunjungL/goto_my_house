@@ -218,7 +218,7 @@ app.get('/naver/callback', async (req, res) => {
         try {
             const [result] = await db.execute(`INSERT INTO user (id, password, name, phone_number, sns_type)
                                                VALUES (?, ?, ?,
-                                                       ?, ?)`, [info_result_json.id, null, info_result_json.name, info_result_json.mobile, 'naver']);
+                                                       ?, ?)`, [info_result_json.id, null, info_result_json.name, info_result_json.mobile.replace(/\-/g,''), 'naver']);
         } catch (e) {
             console.log(e);
         }
