@@ -26,8 +26,16 @@ function login_template(naver_api_url) {
                 $(document).ready(function() {
                     $("#login_button").click(function() {
                         $.post('/login', {id: $('#id').val(), password: $('#password').val()}, function(data) {
-                              localStorage.setItem('token', data.token);
-                              window.location.replace('/');
+                              if (data.token === 'id_false') {
+                                  alert('아이디를 확인해주세요.');
+                                  window.location.replace('/login');
+                              } else if (data.token === 'pwd_false') {
+                                  alert('비밀번호를 확인해주세요.');
+                                  window.location.replace('/login');
+                              } else if (data.token !== undefined) {
+                                 localStorage.setItem('token', data.token);
+                                 window.location.replace('/'); 
+                              }
                         })
                     })
                 })
@@ -70,7 +78,11 @@ function account_find_template() {
                     
                     $('#find_pwd').click(() => {
                         $.post('/login/find_pwd', {name: $('#name').val(), phone_number: $('#phone_number').val()}, (data) => {
-                            
+                            if (data.temp_pwd) window.location.replace('/login');
+                            else {
+                                alert('오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+                                window.location.replace('/login')
+                            }
                         })
                     })
                 })
@@ -102,17 +114,20 @@ app.post('/', async (req, res) => {
     const secret = jwt_secret.jwt_key;
 
     const [result, field] = await db.execute(`SELECT * FROM user WHERE id=?`, [id]);
-    const encode_pwd = await bcrypt.compare(pwd, result[0].password);
 
     if (result.length === 0) {
-        res.send('<script type="text/javascript">alert("아이디를 확인해주세요."); location.href="/login";</script>')
-    } else if (!encode_pwd) {
-        res.send('<script type="text/javascript">alert("비밀번호를 확인해주세요."); location.href="/login";</script>')
+        res.send({token: 'id_false'});
     } else {
-        const token = await jwt.sign(
-            {user_id: id}, secret, {expiresIn: '7d'}
-        );
-        res.send({token: token});
+        const encode_pwd = await bcrypt.compare(pwd, result[0].password);
+
+        if (!encode_pwd) {
+            res.send({token: 'pwd_false'});
+        } else {
+            const token = await jwt.sign(
+                {user_id: id}, secret, {expiresIn: '7d'}
+            );
+            res.send({token: token});
+        }
     }
 })
 
@@ -144,9 +159,10 @@ app.post('/find_pwd', async (req, res) => {
 
         if (result.length !== 0) {
             const temp_pwd = Math.random().toString(36).substr(2, 11);
+            const encode_pwd = await bcrypt.hash(temp_pwd, 10);
             console.log(temp_pwd);
 
-            // const [result] = await db.execute(`UPDATE user SET password=? WHERE name=? AND phone_number=?`, [temp_pwd, name, phone_number]);
+            const [result] = await db.execute(`UPDATE user SET password=? WHERE name=? AND phone_number=?`, [encode_pwd, name, phone_number]);
             //
             // await twilio.messages.create({
             //         body: `[우리집으로 가자] 변경된 임시 비밀번호는 ${temp_pwd} 입니다. 꼭 마이페이지에서 다시 변경해주세요.`,
@@ -156,6 +172,8 @@ app.post('/find_pwd', async (req, res) => {
             //         if (err) console.log(err);
             //         else console.log(message.sid);
             // });
+
+            res.send({temp_pwd: 'true'});
         } else {
             res.send({temp_pwd: 'false'});
         }
